@@ -1,0 +1,9 @@
+name,description,pid,serial_number,vid
+{% for k0 in json %}
+{% set name = k0 %}
+{% set description = json[k0]['description'] %}
+{% set pid = json[k0]['pid'] %}
+{% set sn = json[k0]['sn'] %}
+{% set vid = json[k0]['vid'] %}
+{{ name }},{{ description }},{{ pid }},{{ sn }},{{ vid }}
+{% endfor %}

@@ -1,0 +1,120 @@
+---
+- hosts: NXOS5,NXOS7,NXOS9
+  connection: network_cli
+  gather_facts: no
+  roles:
+    - ansible-pyats
+
+  tasks:
+
+    - name: Gather Ansible Facts About NXOS devices
+      nxos_facts:
+        gather_subset: min
+
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: ./collection/nxos/{{ ansible_net_serialnum }}
+        state: directory
+        mode: '0755'
+
+    - name: command sh ver
+      nxos_command:
+        commands:
+          - show ver
+      register: outver_nxos
+
+    - name: Read in pyats parse
+      set_fact:
+        pyats_ver: "{{ outver_nxos.stdout[0] | pyats_parser('show ver', 'nxos') }}"
+
+    - name: Copy the output into a json file 
+      copy:
+        content: |
+          "{{ pyats_ver | to_nice_json }}"
+        dest: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+
+    - name: Replace "{ with { in ver file.
+      replace:
+        path: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+        regexp: '"{'
+        replace: "{"
+
+    - name: Replace }" with } in ver file.
+      replace:
+        path: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+        regexp: '}"'
+        replace: "}"
+
+    - name: command sh inv
+      nxos_command:
+        commands:
+          - show inv
+      register: outinv_nxos
+
+    - name: Read in pyats parse
+      set_fact:
+        pyats_inv: "{{ outinv_nxos.stdout[0] | pyats_parser('show inv', 'nxos') }}"
+
+    - name: Copy the output into a json file 
+      copy:
+        content: |
+          "{{ pyats_inv.name | to_nice_json }}"
+        dest: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+
+    - name: Replace "{ with { in inv file.
+      replace:
+        path: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '"{'
+        replace: "{"
+
+    - name: Replace }" with } in inv file.
+      replace:
+        path: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '}"'
+        replace: "}"
+
+    - name: This query is run directly against lookup value with from_json
+      template:
+        src: ./templates/nxos_inv.j2
+        dest: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.csv"
+      vars:
+        fil: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        json: "{{ lookup('file', fil) | from_json }}"
+
+    - name: command sh env
+      nxos_command:
+        commands:
+          - show env
+      register: outenv_nxos
+
+    - copy:
+        content: "{{ outenv_nxos.stdout | replace('\\n', '\n') }}"
+        dest: "./collection/nxos/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_env.txt"
+
+    - name: CSV - Generate output filename
+      set_fact: date="{{lookup('pipe','date +%Y%m%d')}}"
+      run_once: true
+
+    - name: CSV - Create file and set the header
+      lineinfile:
+        dest: "./collection/nxos/nxos_inventory_{{ date }}.csv"
+        line:
+          Hostname,Model,Serial,Image,Software Version,sh env results
+        create: yes
+
+    - name: CSV - Get inventory files facts
+      set_fact:
+        csv_tmp: >
+          {{ ansible_net_hostname }},{{ ansible_net_model }},{{ ansible_net_serialnum }},{{ ansible_net_image }},{{ ansible_net_version }},{{ ansible_net_serialnum }}_env.txt
+    
+    - name: CSV - Write information into .csv file
+      lineinfile:
+        insertafter: EOF
+        dest: "./collection/nxos/nxos_inventory_{{ date }}.csv"
+        line: "{{ csv_tmp }}"
+
+    - name: CSV - Blank lines removal
+      lineinfile:
+        path: "./collection/nxos/nxos_inventory_{{ date }}.csv"
+        state: absent
+        regex: '^\s*$'

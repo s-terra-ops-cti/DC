@@ -1,0 +1,8 @@
+[IOS]
+R2 ansible_host=172.30.30.52
+
+[ASA]
+ASA ansible_host=172.30.30.55
+
+[NXOS]
+NXOS ansible_host=172.30.30.83

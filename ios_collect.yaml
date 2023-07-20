@@ -1,0 +1,112 @@
+---
+- hosts: IOS
+  connection: network_cli
+  gather_facts: no
+  roles:
+    - ansible-pyats
+  
+  tasks:
+
+    - name: Gather Ansible Facts About IOS devices
+      ios_facts:
+        gather_subset: min
+
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: ./collection/ios/{{ ansible_net_serialnum }}
+        state: directory
+        mode: '0755'
+
+    - name: command sh ver
+      ios_command:
+        commands:
+          - show ver
+      register: outver_ios
+
+    - name: Read in pyats parse
+      set_fact:
+        pyats_ver: "{{ outver_ios.stdout[0] | pyats_parser('show ver', 'ios') }}"
+
+    - name: Copy the output into a json file 
+      copy:
+        content: |
+          "{{ pyats_ver | to_nice_json }}"
+        dest: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+
+    - name: Replace "{ with { in ver file.
+      replace:
+        path: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+        regexp: '"{'
+        replace: "{"
+
+    - name: Replace }" with } in ver file.
+      replace:
+        path: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.json"
+        regexp: '}"'
+        replace: "}"
+
+    - name: command sh inv
+      ios_command:
+        commands:
+          - show inv
+      register: outinv_ios
+
+    - name: Read in pyats parse
+      set_fact:
+        pyats_inv: "{{ outinv_ios.stdout[0] | pyats_parser('show inv', 'ios') }}"
+
+    - name: Copy the output into a json file 
+      copy:
+        content: |
+          "{{ pyats_inv | to_nice_json }}"
+        dest: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+
+    - name: Replace "{ with { in inv file.
+      replace:
+        path: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '"{'
+        replace: "{"
+
+    - name: Replace }" with } in inv file.
+      replace:
+        path: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '}"'
+        replace: "}"
+
+    - name: command sh env
+      ios_command:
+        commands:
+          - show env all
+      register: outenv_ios
+
+    - copy:
+        content: "{{ outenv_ios.stdout | replace('\\n', '\n') }}"
+        dest: "./collection/ios/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_env.txt"
+
+    - name: CSV - Generate output filename
+      set_fact: date="{{lookup('pipe','date +%Y%m%d')}}"
+      run_once: true
+
+    - name: CSV - Create file and set the header
+      lineinfile:
+        dest: "./collection/ios/ios_inventory_{{ date }}.csv"
+        line:
+          Hostname,Model,Serial,Image,Software Version,sh env results
+        create: yes
+
+    - name: CSV - Get inventory files facts
+      set_fact:
+        csv_tmp: >
+          {{ ansible_net_hostname }},{{ ansible_net_model }},{{ ansible_net_serialnum }},{{ ansible_net_image }},{{ ansible_net_version }},{{ ansible_net_serialnum }}_env.txt
+    
+    - name: CSV - Write information into .csv file
+      lineinfile:
+        insertafter: EOF
+        dest: "./collection/ios/ios_inventory_{{ date }}.csv"
+        line: "{{ csv_tmp }}"
+
+    - name: CSV - Blank lines removal
+      lineinfile:
+        path: "./collection/ios/ios_inventory_{{ date }}.csv"
+        state: absent
+        regex: '^\s*$'

@@ -1,0 +1,125 @@
+---
+- hosts: ASA,ASA1
+  connection: network_cli
+  gather_facts: no
+  roles:
+    - ansible-pyats
+  
+  tasks:
+
+    - name: Gather Ansible Facts About ASA devices
+      cisco.asa.asa_facts:
+        gather_subset: min
+
+    - name: Create a directory if it does not exist
+      ansible.builtin.file:
+        path: ./collection/asa/{{ ansible_net_serialnum }}
+        state: directory
+        mode: '0755'
+
+    - name: command sh ver
+      cisco.asa.asa_command:
+        commands:
+          - show version
+      register: outver_asa
+
+    - copy:
+        content: "{{ outver_asa.stdout | replace('\\n', '\n') }}"
+        dest: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_ver.txt"
+
+    - name: command sh inv
+      cisco.asa.asa_command:
+        commands:
+          - show inventory
+      register: outinv_asa
+
+    - name: Read in pyats parse
+      set_fact:
+        pyats_inv: "{{ outinv_asa.stdout[0] | pyats_parser('show inventory', 'asa') }}"
+
+    - name: Copy the output into a json file 
+      copy:
+        content: |
+          "{{ pyats_inv | to_nice_json }}"
+        dest: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+
+    - name: Replace "{ with { in inv file.
+      replace:
+        path: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '"{'
+        replace: "{"
+
+    - name: Replace }" with } in inv file.
+      replace:
+        path: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        regexp: '}"'
+        replace: "}"
+
+    - name: This query is run directly against lookup value with from_json
+      template:
+        src: ./templates/asa_inv.j2
+        dest: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.csv"
+      vars:
+        fil: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        json: "{{ lookup('file', fil) | from_json }}"
+
+    - name: command sh env
+      cisco.asa.asa_command:
+        commands:
+          - show env
+      register: outenv_asa
+      ignore_errors: yes
+
+    - copy:
+        content: "{{ outenv_asa.stdout | replace('\\n', '\n') }}"
+        dest: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_env.txt"
+      ignore_errors: yes
+
+    - name: ENV file status
+      stat:
+        path: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_env.txt"
+      register: result
+
+    - name: CSV - Generate output filename
+      set_fact: date="{{lookup('pipe','date +%Y%m%d')}}"
+      run_once: true
+
+    - name: CSV - Create file and set the header
+      lineinfile:
+        dest: "./collection/asa/asa_inventory_{{ date }}.csv"
+        line:
+          Hostname,Model,Serial,Software Version,sh env results
+        create: yes
+
+    - name: CSV - Get inventory files facts for hosts with ENV files
+      set_fact:
+        csv_tmp: >
+          {{ ansible_net_hostname }},{{ json.Chassis.pid }},{{ ansible_net_serialnum }},{{ ansible_net_version }},{{ env_stat }}
+      vars:
+        env_stat: "{{ ansible_net_serialnum }}_env.txt"
+        fil: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        json: "{{ lookup('file', fil) | from_json }}"
+      when: result.stat.exists
+
+    - name: CSV - Get inventory files facts for hosts without ENV files
+      set_fact:
+        csv_tmp: >
+          {{ ansible_net_hostname }},{{ json.Chassis.pid }},{{ ansible_net_serialnum }},{{ ansible_net_version }},{{ env_stat }}
+      vars:
+        env_stat: "NA"
+        fil: "./collection/asa/{{ ansible_net_serialnum }}/{{ ansible_net_serialnum }}_inv.json"
+        json: "{{ lookup('file', fil) | from_json }}"
+      when: not result.stat.exists
+
+
+    - name: CSV - Write information into .csv file
+      lineinfile:
+        insertafter: EOF
+        dest: "./collection/asa/asa_inventory_{{ date }}.csv"
+        line: "{{ csv_tmp }}"
+
+    - name: CSV - Blank lines removal
+      lineinfile:
+        path: "./collection/asa/asa_inventory_{{ date }}.csv"
+        state: absent
+        regex: '^\s*$'
