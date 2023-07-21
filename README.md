@@ -64,7 +64,7 @@ ASA ansible_host=172.30.30.55
 [NXOS]
 NXOS ansible_host=172.30.30.83
 ```
-Добавьте все оборудование, работающее на IOS и IOSXE в группу [IOS], фаерволы ASA в [ASA] и свитчи Nexus в [NXOS]. В случае если хосты ресолвятся через DNS, IP-адреса опциональны.
+Добавьте все оборудование, работающее на `IOS и IOSXE` в группу `[IOS]`, фаерволы `ASA` в `[ASA]` и свитчи `Nexus` в `[NXOS]`. В случае если хосты ресолвятся через DNS, IP-адреса опциональны.
 
 Отредактируйте файлы asa.yml, ios.yml и nxos.yml в директории group_vars
 ------------------------------------------------------------------------
@@ -85,16 +85,16 @@ ansible_user:
 Запустите playbook’и для каждого вида оборудования
 --------------------------------------------------
 * `ansible-playbook asa_collect.yaml -k` – для сбора данных с оборудования ASA
-* `ansible-playbook ios_collect.yaml -k` – для сбора данных с оборудования c оборудования работающего на IOS и IOXE
+* `ansible-playbook ios_collect.yaml -k` – для сбора данных с оборудования c оборудования работающего на IOS и IOSXE
 * `ansible-playbook nxos_collect.yaml -k` – для сбора данных с оборудования Nexus
 
-Ключ -k для последующего ввода пароля пользователя, указанного в файлах asa.yml, iso.yml и nxos.yml, если пароль не указан в `ansible_password`.
+Ключ `-k` для последующего ввода пароля пользователя, указанного в файлах `asa.yml`, `iso.yml` и `nxos.yml`, если пароль не указан в `ansible_password`.
 
-Если необходимо ввести пароль enable необходимо добавить ключ -K
+Если необходимо ввести пароль enable необходимо добавить ключ `-K`
 
 Заархивируйте выходные данные
 -----------------------------
 ```
-tar -zcvf collection.tar.gz collection/ && md5sum collection.tar.gz > collection.md5
+tar -zcvf collection_$(date +%F).tar.gz collection/ && md5sum collection_$(date +%F).tar.gz > collection_$(date +%F).md5
 ```
-Отправьте архив вместе с файлом контрольной суммы `collection.md5` в CTI.
+Отправьте архив `collection.tar.gz` вместе с файлом контрольной суммы `collection.md5` в CTI.
