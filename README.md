@@ -97,4 +97,4 @@ ansible_user:
 ```
 tar -zcvf collection.tar.gz collection/ && md5sum collection.tar.gz > collection.md5
 ```
-Отправьте архив вместе с файлом контрольной суммы collection.md5 в CTI.
+Отправьте архив вместе с файлом контрольной суммы `collection.md5` в CTI.
