@@ -84,11 +84,13 @@ ansible_user:
 
 Запустите playbook’и для каждого вида оборудования
 --------------------------------------------------
-* `ansible-playbook asa_collect.yaml -k -K` – для сбора данных с оборудования ASA
-* `ansible-playbook ios_collect.yaml -k -K` – для сбора данных с оборудования c оборудования работающего на IOS и IOXE
-* `ansible-playbook nxos_collect.yaml -k -K` – для сбора данных с оборудования Nexus
+* `ansible-playbook asa_collect.yaml -k` – для сбора данных с оборудования ASA
+* `ansible-playbook ios_collect.yaml -k` – для сбора данных с оборудования c оборудования работающего на IOS и IOXE
+* `ansible-playbook nxos_collect.yaml -k` – для сбора данных с оборудования Nexus
 
-Ключ -k для последующего ввода пароля пользователя, указанного в файлах asa.yml, iso.yml и nxos.yml. Ключ -K (если необходимо) для последующего ввода пароля enable.
+Ключ -k для последующего ввода пароля пользователя, указанного в файлах asa.yml, iso.yml и nxos.yml, если пароль не указан в `ansible_password`.
+
+Если необходимо ввести пароль enable необходимо добавить ключ -K
 
 Заархивируйте выходные данные
 -----------------------------
