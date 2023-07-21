@@ -76,6 +76,7 @@ ansible_user:
 # ansible_become_password: 
 ```
 Добавьте пользователя, под которым разрешен доступ на оборудование по SSH.
+
 Можете раскоментировать:
 * `ansible_password` – если не хотите вводить пароль при запуске playbook’а
 * `ansible_become` – если на оборудовании есть enable пароль
@@ -86,6 +87,7 @@ ansible_user:
 * `ansible-playbook asa_collect.yaml -k -K` – для сбора данных с оборудования ASA
 * `ansible-playbook ios_collect.yaml -k -K` – для сбора данных с оборудования c оборудования работающего на IOS и IOXE
 * `ansible-playbook nxos_collect.yaml -k -K` – для сбора данных с оборудования Nexus
+
 Ключ -k для последующего ввода пароля пользователя, указанного в файлах asa.yml, iso.yml и nxos.yml. Ключ -K (если необходимо) для последующего ввода пароля enable.
 
 Заархивируйте выходные данные
