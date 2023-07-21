@@ -1,5 +1,5 @@
 ---
-- hosts: ASA,ASA1
+- hosts: ASA
   connection: network_cli
   gather_facts: no
   roles:

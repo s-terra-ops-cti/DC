@@ -1,5 +1,5 @@
 ---
-- hosts: NXOS5,NXOS7,NXOS9
+- hosts: NXOS
   connection: network_cli
   gather_facts: no
   roles:
